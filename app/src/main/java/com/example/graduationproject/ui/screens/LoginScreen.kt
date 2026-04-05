@@ -9,16 +9,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import kotlinx.coroutines.launch
-import com.example.graduationproject.api.ApiClient
-import com.example.graduationproject.DataClass.LoginRequest
+
 // 延續專案色調
 private val BeigeBg = Color(0xFFFDFCF9)
 private val PrimaryPeach = Color(0xFFFF8A65)
@@ -38,6 +39,7 @@ fun LoginScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = android.view.View(LocalContext.current)
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BeigeBg
@@ -65,9 +67,9 @@ fun LoginScreen(
                 fontWeight = FontWeight.Bold,
                 color = TextMain
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "請登入以繼續您的健康旅程",
                 fontSize = 18.sp,
@@ -79,18 +81,18 @@ fun LoginScreen(
             // 帳號輸入框
             OutlinedTextField(
                 value = account,
-                onValueChange = { 
+                onValueChange = {
                     account = it
                     errorMessage = null // 輸入時清除錯誤
                 },
                 label = { Text("帳號", fontSize = 18.sp) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 isError = errorMessage != null,
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp),
-                enabled = !isLoading
+                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -98,12 +100,13 @@ fun LoginScreen(
             // 密碼輸入框
             OutlinedTextField(
                 value = password,
-                onValueChange = { 
+                onValueChange = {
                     password = it
-                    errorMessage = null 
+                    errorMessage = null
                 },
                 label = { Text("密碼", fontSize = 18.sp) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
                 shape = RoundedCornerShape(16.dp),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
@@ -115,8 +118,7 @@ fun LoginScreen(
                         Icon(imageVector = image, contentDescription = if (passwordVisible) "隱藏密碼" else "顯示密碼")
                     }
                 },
-                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp),
-                enabled = !isLoading
+                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
             )
 
             // 錯誤訊息顯示
@@ -139,60 +141,46 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // 登入按鈕
-            Button(
+            ScaleButton(
                 onClick = {
                     if (account.isEmpty() || password.isEmpty()) {
                         errorMessage = "帳號或密碼不能為空"
-                    }
-                    else {
+                    } else {
                         isLoading = true
-                        errorMessage = null
-
                         coroutineScope.launch {
                             try {
-                                val request = LoginRequest(account, password)
-                                val response = ApiClient.apiService.login(request)
+                                val loginRequest = com.example.graduationproject.DataClass.LoginRequest(
+                                    username = account,
+                                    password = password
+                                )
+                                val response = com.example.graduationproject.api.ApiClient.apiService.login(loginRequest)
 
                                 if (response.isSuccessful && response.body()?.success == true) {
-                                    val userData = response.body()?.data
-                                    if (userData != null) {
-                                        onLoginSuccess(userData.role, userData.account_id)
-                                        //這裡預計要根據role決定跳轉頁面
-                                    }
-                                    else{
-                                        errorMessage = "系統錯誤：無法解析使用者資料"
-                                    }
-                                }
-                                else {
+                                    val body = response.body()!!
+                                    val safeRole = body.role ?: "elder"
+                                    onLoginSuccess(safeRole, body.account_id)
+                                } else {
                                     errorMessage = response.body()?.message ?: "帳號或密碼錯誤"
                                 }
                             } catch (e: Exception) {
-                                errorMessage = "網路連線失敗，請檢查網路或伺服器"
+                                errorMessage = "網路連線失敗，請檢查網路"
                             } finally {
                                 isLoading = false
                             }
                         }
-
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPeach),
-                shape = RoundedCornerShape(16.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
-                } else {
-                    Text(text = "登入", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+                text = "登入",
+                contentDescription = "登入按鈕"
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // 前往註冊連結
-            TextButton(onClick = onNavigateToRegister) {
+            TextButton(
+                onClick = onNavigateToRegister,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
                 Text(
                     text = "還沒有帳號？ 前往註冊",
                     color = SecondaryTeal,
@@ -205,14 +193,14 @@ fun LoginScreen(
 
             // 第三方登入區
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Divider(modifier = Modifier.weight(1f), color = TextMain.copy(alpha = 0.1f))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = TextMain.copy(alpha = 0.1f))
                 Text(
                     text = " 或使用以下方式登入 ",
                     fontSize = 14.sp,
                     color = TextMain.copy(alpha = 0.4f),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                Divider(modifier = Modifier.weight(1f), color = TextMain.copy(alpha = 0.1f))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = TextMain.copy(alpha = 0.1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -224,7 +212,7 @@ fun LoginScreen(
                 // LINE 登入
                 OutlinedButton(
                     onClick = { /* LINE 登入 */ },
-                    modifier = Modifier.weight(1f).height(56.dp),
+                    modifier = Modifier.weight(1f).height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
                 ) {
@@ -236,7 +224,7 @@ fun LoginScreen(
                 // Google 登入
                 OutlinedButton(
                     onClick = { /* Google 登入 */ },
-                    modifier = Modifier.weight(1f).height(56.dp),
+                    modifier = Modifier.weight(1f).height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
                 ) {
@@ -256,5 +244,3 @@ fun LoginScreenPreview() {
         LoginScreen()
     }
 }
-
-

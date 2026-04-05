@@ -1,23 +1,20 @@
 package com.example.graduationproject.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.graduationproject.api.ApiClient
-import com.example.graduationproject.DataClass.RegisterElderRequest
+import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import kotlinx.coroutines.launch
 
@@ -26,22 +23,24 @@ private val BeigeBg = Color(0xFFFDFCF9)
 private val PrimaryPeach = Color(0xFFFF8A65)
 private val SecondaryTeal = Color(0xFF4DB6AC)
 private val TextMain = Color(0xFF201A18)
-private val ErrorRed = Color(0xFFB00020)
+
 @Composable
 fun RegisterScreen(
     onNavigateBackToLogin: () -> Unit = {},
-    //onRegisterSuccess: () -> Unit = {}
+    onRegisterSuccess: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf("") }
     var account by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BeigeBg
@@ -49,7 +48,8 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -59,9 +59,9 @@ fun RegisterScreen(
                 fontWeight = FontWeight.Bold,
                 color = TextMain
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "加入我們，開始智慧健康生活",
                 fontSize = 16.sp,
@@ -82,27 +82,28 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 帳號輸入框
             OutlinedTextField(
-                value = account,
-                onValueChange = { account = it },
-                label = { Text("帳號") },
+                value = phone,
+                onValueChange = { phone = it; errorMessage = null },
+                label = { Text("聯絡電話") },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
                 shape = RoundedCornerShape(16.dp),
-                singleLine = true
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 帳號輸入框
             OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it; errorMessage = null },
-                label = { Text("電話") },
+                value = account,
+                onValueChange = { account = it },
+                label = { Text("帳號 (Email 或 手機)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                singleLine = true,
-                enabled = !isLoading
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -134,76 +135,55 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // 註冊按鈕
-            Button(
+            ScaleButton(
                 onClick = {
-                    if (name.isEmpty() || account.isEmpty() || phone.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                    if (name.isEmpty() || account.isEmpty() || password.isEmpty() || phone.isEmpty()) {
                         errorMessage = "請填寫所有欄位"
-                    }
-                    else if (password != confirmPassword) {
-                        errorMessage = "兩次輸入的密碼不一致"
-                    }
-                    else {
+                    } else if (password != confirmPassword) {
+                        errorMessage = "兩次密碼輸入不一致"
+                    } else {
                         isLoading = true
-                        errorMessage = null
-
                         coroutineScope.launch {
                             try {
-                                val request = RegisterElderRequest(
-                                    name = name.trim(),
-                                    username = account.trim(),
-                                    password = password.trim(),
-                                    phone = phone.trim()
+                                val request = com.example.graduationproject.DataClass.RegisterElderRequest(
+                                    name = name,
+                                    username = account,
+                                    password = password,
+                                    phone = phone
                                 )
-
-                                val response = ApiClient.apiService.registerElder(request)
+                                val response = com.example.graduationproject.api.ApiClient.apiService.registerElder(request)
 
                                 if (response.isSuccessful && response.body()?.success == true) {
-                                    Toast.makeText(context, "註冊成功！請重新登入", Toast.LENGTH_SHORT).show()
-                                    onNavigateBackToLogin()
+                                    android.widget.Toast.makeText(context, "註冊成功！", android.widget.Toast.LENGTH_SHORT).show()
+                                    onRegisterSuccess()
                                 } else {
-                                    val errorString = response.errorBody()?.string()
-                                    if (errorString != null) {
-                                        try {
-                                            val jsonObject = org.json.JSONObject(errorString)
-                                            errorMessage = jsonObject.getString("message")
-                                        } catch (e: Exception) {
-                                            errorMessage = "伺服器錯誤 (狀態碼: ${response.code()})"
-                                        }
-                                    } else {
-                                        errorMessage = "註冊失敗，請稍後再試"
-                                    }
+                                    errorMessage = response.body()?.message ?: "註冊失敗"
                                 }
                             } catch (e: Exception) {
-                                errorMessage = "網路連線失敗，請檢查網路或伺服器"
-                                e.printStackTrace()
+                                errorMessage = "網路異常：${e.message}"
                             } finally {
                                 isLoading = false
                             }
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPeach),
-                shape = RoundedCornerShape(16.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
-                } else {
-                Text(text = "註冊", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            }
+                text = if (isLoading) "註冊中..." else "註冊",
+                enabled = !isLoading,
+                contentDescription = "註冊帳號按鈕"
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // 返回登入按鈕
-            TextButton(onClick = onNavigateBackToLogin) {
+            TextButton(
+                onClick = onNavigateBackToLogin,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
                 Text(
                     text = "已有帳號？ 返回登入",
                     color = SecondaryTeal,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
                 )
             }
         }
