@@ -89,6 +89,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
             )
         }
 
+
         composable("survey") {
             val coroutineScope = rememberCoroutineScope()
             val context = androidx.compose.ui.platform.LocalContext.current
@@ -96,7 +97,9 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
             SurveyScreen(
                 onComplete = { grade, score, hasFallRisk ->
 
-                    coroutineScope.launch {
+                    userViewModel.completeSurvey(grade)
+                    navController.popBackStack()
+                    /*coroutineScope.launch {
                         try {
                             val request = com.example.graduationproject.DataClass.SaveAssessmentRequest(
                                 account_id = globalAccountId,
@@ -119,7 +122,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
                         catch (e: Exception) {
                             android.widget.Toast.makeText(context, "網路連線異常：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    }*/
                 },
                 onNavigateBack = {
                     navController.popBackStack()

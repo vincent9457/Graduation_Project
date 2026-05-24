@@ -378,3 +378,10 @@ fun EmptyStateView(onNavigateToSurvey: () -> Unit) {
         )
     }
 }
+@Preview(showBackground = true, widthDp = 412, heightDp = 892)
+@Composable
+fun AssignmentScreenPreview() {
+    GraduationProjectTheme {
+        AssignmentScreen()
+    }
+}

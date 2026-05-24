@@ -139,7 +139,12 @@ fun ElderlyDashboard(
                     // 4. 更新關鍵按鈕：使用優化後的 ScaleButton
                     ScaleButton(
                         onClick = {
-                            if (isSurveyComplete) onStartTraining() else onNavigateToSurvey()
+                            if (isSurveyComplete) {
+                                onStartTraining() // 執行原本的訓練開始邏輯
+                                selectedItem = 1  // 切換底部分頁到「任務集」(AssignmentScreen)
+                            } else {
+                                onNavigateToSurvey()
+                            }
                         },
                         text = if (isSurveyComplete) "🏃 開始今日訓練" else "前往填寫體能量表問卷",
                         modifier = Modifier.fillMaxWidth(0.9f).height(80.dp),
