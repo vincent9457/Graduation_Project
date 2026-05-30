@@ -16,6 +16,7 @@ import com.example.graduationproject.ui.screens.LoginScreen
 import com.example.graduationproject.ui.screens.RegisterScreen
 import com.example.graduationproject.ui.screens.SettingsScreen
 import com.example.graduationproject.ui.screens.SurveyScreen
+import com.example.graduationproject.ui.screens.ForgotPasswordScreen
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import com.example.graduationproject.ui.theme.LocalFontScale
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
+                onNavigateToForgotPassword = { navController.navigate("forgot_password") },
                 onLoginSuccess = { role, accountId ->
                     globalAccountId = accountId
 
@@ -73,6 +75,13 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
 
         composable("register") {
             RegisterScreen(onNavigateBackToLogin = { navController.popBackStack() })
+        }
+
+        composable("forgot_password") {
+            ForgotPasswordScreen(
+                onNavigateBackToLogin = { navController.popBackStack() },
+                onResetSuccess = { navController.popBackStack() }
+            )
         }
 
         composable("home") {

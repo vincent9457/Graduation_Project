@@ -36,6 +36,7 @@ private val ErrorRed = Color(0xFFB00020)
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
+    onNavigateToForgotPassword: () -> Unit = {},
     onLoginSuccess:(String, Int) -> Unit = { _, _ -> }
 ) {
     var account by remember { mutableStateOf("") }
@@ -45,7 +46,6 @@ fun LoginScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val context = android.view.View(LocalContext.current)
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BeigeBg
@@ -138,7 +138,7 @@ fun LoginScreen(
 
             // 忘記密碼按鈕
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = { /* 忘記密碼邏輯 */ }) {
+                TextButton(onClick = onNavigateToForgotPassword) {
                     Text("忘記密碼？", color = TextMain.copy(alpha = 0.6f), fontSize = 16.sp)
                 }
             }
