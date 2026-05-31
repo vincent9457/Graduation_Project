@@ -48,6 +48,7 @@ fun AssignmentScreen(
     currentDay: Int = 1,
     isSurveyComplete: Boolean = false,
     onNavigateToSurvey: () -> Unit = {},
+    onStartTraining: (String?) -> Unit = {},
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -137,7 +138,8 @@ fun AssignmentScreen(
                             exercise = exercise,
                             onStartClick = { 
                                 // 模擬訓練開始，實際上這裡會導向 AI 偵測頁面，目前先直接標記完成
-                                viewModel.completeExercise(exercise.id) 
+                                onStartTraining(exercise.id)
+                                viewModel.completeExercise(exercise.id)
                             }
                         )
                     }
