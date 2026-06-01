@@ -12,7 +12,8 @@
         android:label="FitCare"
         android:roundIcon="@drawable/fit_care_logo"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GraduationProject">
+        android:theme="@style/Theme.GraduationProject"
+        tools:replace="android:theme,android:icon,android:label,android:roundIcon">
         <activity
             android:name=".MainActivity"
             android:exported="true"
