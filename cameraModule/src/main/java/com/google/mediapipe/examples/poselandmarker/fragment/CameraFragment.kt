@@ -164,7 +164,7 @@ class CameraFragment : Fragment() {
         }
 
         fragmentCameraBinding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         fragmentCameraBinding.fabSwitchCamera.setOnClickListener {
