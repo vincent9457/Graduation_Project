@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
 
         fun resolveTargetDestination(targetFragment: String): Int? {
             return when (targetFragment) {
+                "camera_fragment" -> R.id.camera_fragment
                 "stretch_fragment" -> R.id.stretch_fragment
                 "chair_stand_fragment" -> R.id.chair_stand_fragment
                 "walking_fragment" -> R.id.walking_fragment
