@@ -52,15 +52,31 @@ fun ElderlyDashboard(
     onNavigateToSurvey: () -> Unit = {},
     onStartTraining: (String?) -> Unit = {}
 ) {
+    var elderName by remember { mutableStateOf("長輩") }
+    var elderLevel by remember { mutableIntStateOf(1) }
+    var elderGrade by remember { mutableStateOf("A") }
     var currentPoints by remember { mutableIntStateOf(0) }
+    var streakDays by remember { mutableIntStateOf(0) }
+    var currentWeek by remember { mutableIntStateOf(1) }
     var selectedItem by remember { mutableIntStateOf(0) }
-    LaunchedEffect(accountId) {
-        if (accountId <= 0) return@LaunchedEffect
+    var localIsSurveyComplete by remember(isSurveyComplete) { mutableStateOf(isSurveyComplete) }
+
+    LaunchedEffect(accountId, selectedItem, isSurveyComplete) {
+        if (accountId <= 0 || selectedItem != 0) return@LaunchedEffect
+
         try {
             val request = GetPointsRequest(accountId = accountId)
-            val response = ApiClient.apiService.getPoints(request)
+            val response = ApiClient.apiService.getElderDashboardData(request)
+
             if (response.isSuccessful && response.body()?.success == true) {
-                currentPoints = response.body()?.points ?: 0
+                val data = response.body()!!
+                elderName = data.name
+                elderLevel = data.level
+                elderGrade = data.grade
+                currentPoints = data.points
+                streakDays = data.streakDays
+                currentWeek = data.currentWeek
+                localIsSurveyComplete = data.grade.isNotEmpty()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -84,31 +100,17 @@ fun ElderlyDashboard(
                     title = { },
                     navigationIcon = {
                         IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "設定",
-                                modifier = Modifier.size(32.dp),
-                                tint = TextMain
-                            )
+                            Icon(imageVector = Icons.Default.Settings, contentDescription = "設定", modifier = Modifier.size(32.dp), tint = TextMain)
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* TODO: 通知中心 */ }) {
-                            BadgedBox(
-                                badge = { Badge { Text(text = "3", fontSize = 10.scaledSp()) } }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "通知中心",
-                                    modifier = Modifier.size(32.dp),
-                                    tint = TextMain
-                                )
+                        IconButton(onClick = { /* TODO */ }) {
+                            BadgedBox(badge = { Badge { Text(text = "3", fontSize = 10.scaledSp()) } }) {
+                                Icon(imageVector = Icons.Default.Notifications, contentDescription = "通知中心", modifier = Modifier.size(32.dp), tint = TextMain)
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Transparent
-                    )
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
                 )
             }
         },
@@ -118,39 +120,27 @@ fun ElderlyDashboard(
                     modifier = Modifier.padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 提示文字
                     Surface(
                         color = Color.White.copy(alpha = 0.9f),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.padding(bottom = 12.dp)
                     ) {
                         Text(
-                            text = if (isSurveyComplete)
-                                "💡 預計 15 分鐘，請準備一張穩固的椅子"
-                            else
-                                "💡 請先完成評估，以便為您安排專屬任務",
-                            fontSize = 16.scaledSp(),
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryPeach,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            text = if (localIsSurveyComplete) "💡 預計 15 分鐘，請準備一張穩固的椅子" else "💡 請先完成評估，以便為您安排專屬任務",
+                            fontSize = 16.scaledSp(), fontWeight = FontWeight.Bold, color = PrimaryPeach, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
 
-                    // 4. 更新關鍵按鈕：使用優化後的 ScaleButton
                     ScaleButton(
                         onClick = {
-                            if (isSurveyComplete) {
-                                selectedItem = 1  // 切換底部分頁到「任務集」(AssignmentScreen)
-                            } else {
-                                onNavigateToSurvey()
-                            }
+                            if (localIsSurveyComplete) selectedItem = 1 else onNavigateToSurvey()
                         },
-                        text = if (isSurveyComplete) "🏃 開始今日訓練" else "前往填寫體能量表問卷",
+                        text = if (localIsSurveyComplete) "🏃 開始今日訓練" else "前往填寫體能量表問卷",
                         modifier = Modifier.fillMaxWidth(0.9f).height(80.dp),
-                        fontSize = if (isSurveyComplete) 24.sp else 22.sp,
+                        fontSize = if (localIsSurveyComplete) 24.sp else 22.sp,
                         shape = RoundedCornerShape(40.dp),
                         containerColor = PrimaryPeach,
-                        icon = if (isSurveyComplete) null else Icons.Default.Lock
+                        icon = if (localIsSurveyComplete) null else Icons.Default.Lock
                     )
                 }
             }
@@ -163,41 +153,45 @@ fun ElderlyDashboard(
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedItem) {
                 0 -> DashboardContent(
+                    elderName = elderName,
+                    elderLevel = elderLevel,
                     currentPoints = currentPoints,
-                    isSurveyComplete = isSurveyComplete,
+                    streakDays = streakDays,
+                    currentWeek = currentWeek,
+                    isSurveyComplete = localIsSurveyComplete,
                     onNavigateToSurvey = onNavigateToSurvey
                 )
                 1 -> AssignmentScreen(
-                    userLevel = userLevel,
-                    isSurveyComplete = isSurveyComplete,
+                    userLevel = elderGrade,
+                    isSurveyComplete = localIsSurveyComplete,
                     onNavigateToSurvey = onNavigateToSurvey,
                     onStartTraining = onStartTraining
                 )
-                2 -> CommunityScreen()
-                3 -> RewardScreen(
-                    accountId = accountId,
-                    currentPoints = currentPoints,
-                    onPointsUpdated = { newPoints ->
-                        currentPoints = newPoints
-                    }
-                )
+                2 -> CommunityScreen(accountId = accountId)
+                3 -> RewardScreen(accountId = accountId, currentPoints = currentPoints, onPointsUpdated = { currentPoints = it })
             }
         }
     }
 }
 
 @Composable
-fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToSurvey: () -> Unit){
+fun DashboardContent(
+    elderName: String,
+    elderLevel: Int,
+    currentPoints: Int,
+    streakDays: Int,
+    currentWeek: Int,
+    isSurveyComplete: Boolean,
+    onNavigateToSurvey: () -> Unit
+) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp)
     ) {
         item {
             Column {
                 Text(
-                    text = "早安，陳爺爺！",
+                    text = "早安，${elderName}！",
                     fontSize = 32.scaledSp(),
                     fontWeight = FontWeight.ExtraBold,
                     color = TextMain
@@ -215,18 +209,18 @@ fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToS
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.White
-                            )
+                            Icon(imageVector = Icons.Default.Verified, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                             Spacer(modifier = Modifier.width(4.dp))
+
+                            val levelTitle = when(elderLevel) {
+                                1 -> "新手長青"
+                                2 -> "健康長青"
+                                3 -> "活力長青"
+                                else -> "運動達人"
+                            }
                             Text(
-                                text = "Lv.3 活力長青",
-                                fontSize = 18.scaledSp(),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                text = "Lv.$elderLevel $levelTitle",
+                                fontSize = 18.scaledSp(), fontWeight = FontWeight.Bold, color = Color.White
                             )
                         }
                     }
@@ -237,10 +231,7 @@ fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToS
                     ) {
                         Text(
                             text = "健康狀態：優良",
-                            fontSize = 18.scaledSp(),
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            fontSize = 18.scaledSp(), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32), modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -249,8 +240,9 @@ fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToS
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
         item {
-            StatsFilledCardsRow(currentPoints = currentPoints)
+            StatsFilledCardsRow(streakDays = streakDays, currentPoints = currentPoints)
             Spacer(modifier = Modifier.height(24.dp))
+
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -258,24 +250,18 @@ fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToS
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "目前進度：第 2 週",
-                        fontSize = 18.scaledSp(),
-                        fontWeight = FontWeight.Bold,
-                        color = SecondaryTeal
+                        text = "目前進度：第 $currentWeek 週",
+                        fontSize = 18.scaledSp(), fontWeight = FontWeight.Bold, color = SecondaryTeal
                     )
                     Text(
                         text = "共 12 週",
-                        fontSize = 18.scaledSp(),
-                        color = TextSub
+                        fontSize = 18.scaledSp(), color = TextSub
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = { 2f / 12f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(6.dp)),
+                    progress = { currentWeek.toFloat() / 12f },
+                    modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)),
                     color = SecondaryTeal,
                     trackColor = SecondaryTeal.copy(alpha = 0.2f)
                 )
@@ -286,12 +272,33 @@ fun DashboardContent(currentPoints: Int,isSurveyComplete: Boolean, onNavigateToS
         item {
             DigitalTwinElevatedCard()
         }
+    }
+}
 
-        item { Spacer(modifier = Modifier.height(24.dp)) }
-
-        item {
-            StatsFilledCardsRow(currentPoints = currentPoints)
-        }
+@Composable
+fun StatsFilledCardsRow(streakDays: Int, currentPoints: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        FilledCard(
+            modifier = Modifier.weight(1f),
+            label = "連續訓練",
+            value = streakDays.toString(),
+            unit = "天",
+            containerColor = StatsPastelBlue,
+            icon = Icons.Default.Whatshot,
+            iconColor = Color(0xFF1976D2)
+        )
+        FilledCard(
+            modifier = Modifier.weight(1f),
+            label = "累積點數",
+            value = currentPoints.toString(),
+            unit = "P",
+            containerColor = StatsPastelOrange,
+            icon = Icons.Default.MonetizationOn,
+            iconColor = Color(0xFFF57C00)
+        )
     }
 }
 
@@ -392,33 +399,6 @@ fun DigitalTwinElevatedCard() {
         ) {
             HealthRadarChart(modifier = Modifier.size(240.dp))
         }
-    }
-}
-
-@Composable
-fun StatsFilledCardsRow(currentPoints: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        FilledCard(
-            modifier = Modifier.weight(1f),
-            label = "連續訓練",
-            value = "12",
-            unit = "天",
-            containerColor = StatsPastelBlue,
-            icon = Icons.Default.Whatshot,
-            iconColor = Color(0xFF1976D2)
-        )
-        FilledCard(
-            modifier = Modifier.weight(1f),
-            label = "累積點數",
-            value = currentPoints.toString(),
-            unit = "P",
-            containerColor = StatsPastelOrange,
-            icon = Icons.Default.MonetizationOn,
-            iconColor = Color(0xFFF57C00)
-        )
     }
 }
 

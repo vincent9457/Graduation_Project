@@ -1,7 +1,7 @@
-//TODO: forget password
-
 package com.example.graduationproject.ui.screens
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,10 +21,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.graduationproject.R
+import com.example.graduationproject.api.ApiClient
 import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import kotlinx.coroutines.launch
-import android.util.Log
 
 // 延續專案色調
 private val BeigeBg = Color(0xFFFDFCF9)
@@ -33,19 +33,21 @@ private val SecondaryTeal = Color(0xFF4DB6AC)
 private val TextMain = Color(0xFF201A18)
 private val ErrorRed = Color(0xFFB00020)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
     onNavigateToForgotPassword: () -> Unit = {},
-    onLoginSuccess:(String, Int) -> Unit = { _, _ -> }
+    onLoginSuccess: (String, Int) -> Unit = { _, _ -> }
 ) {
     var account by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) } // 模擬錯誤訊息
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BeigeBg
@@ -88,7 +90,7 @@ fun LoginScreen(
                 value = account,
                 onValueChange = {
                     account = it
-                    errorMessage = null // 輸入時清除錯誤
+                    errorMessage = null
                 },
                 label = { Text("帳號", fontSize = 18.sp) },
                 modifier = Modifier.fillMaxWidth(),
@@ -96,8 +98,15 @@ fun LoginScreen(
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 isError = errorMessage != null,
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Person, contentDescription = null)
+                },
+                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryPeach,
+                    unfocusedBorderColor = TextMain.copy(alpha = 0.2f),
+                    errorBorderColor = ErrorRed
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -116,14 +125,24 @@ fun LoginScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 isError = errorMessage != null,
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                },
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = if (passwordVisible) "隱藏密碼" else "顯示密碼")
+                        Icon(
+                            imageVector = image,
+                            contentDescription = if (passwordVisible) "隱藏密碼" else "顯示密碼"
+                        )
                     }
                 },
-                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
+                textStyle = LocalTextStyle.current.copy(fontSize = 18.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryPeach,
+                    unfocusedBorderColor = TextMain.copy(alpha = 0.2f),
+                    errorBorderColor = ErrorRed
+                )
             )
 
             // 錯誤訊息顯示
@@ -132,14 +151,23 @@ fun LoginScreen(
                     text = errorMessage!!,
                     color = ErrorRed,
                     fontSize = 14.sp,
-                    modifier = Modifier.align(Alignment.Start).padding(start = 16.dp, top = 4.dp)
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(start = 16.dp, top = 4.dp)
                 )
             }
 
             // 忘記密碼按鈕
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
                 TextButton(onClick = onNavigateToForgotPassword) {
-                    Text("忘記密碼？", color = TextMain.copy(alpha = 0.6f), fontSize = 16.sp)
+                    Text(
+                        text = "忘記密碼？",
+                        color = TextMain.copy(alpha = 0.6f),
+                        fontSize = 16.sp
+                    )
                 }
             }
 
@@ -158,7 +186,7 @@ fun LoginScreen(
                                     username = account,
                                     password = password
                                 )
-                                /*val response = com.example.graduationproject.api.ApiClient.apiService.login(loginRequest)
+                                val response = ApiClient.apiService.login(loginRequest)
 
                                 if (response.isSuccessful && response.body()?.success == true) {
                                     val body = response.body()!!
@@ -166,15 +194,28 @@ fun LoginScreen(
                                     val realAccountId = body.data?.account_id ?: 0
 
                                     onLoginSuccess(safeRole, realAccountId)
-                                }
-                                因要測試介面，故API呼叫先註解掉，若需要執行資料庫，則將註解取消*/
-                                if (account == "admin") { /*管理者直接登入，帳號、密碼皆為：admin*/
-                                    onLoginSuccess("elder", 1)
                                 } else {
-                                    errorMessage = "請輸入 admin 進行測試"
+                                    /*
+                                    /*因要測試介面，故API呼叫先註解掉，若需要執行資料庫，則將註解取消*/
+                                    if (account == "admin") { /*管理者直接登入，帳號、密碼皆為：admin*/
+                                        onLoginSuccess("elder", 1)
+                                    } else {
+                                        errorMessage = "請輸入 admin 進行測試"
+                                    }
+                                    */
+                                    val realErrorMessage = try {
+                                        val errorStr = response.errorBody()?.string()
+                                            ?: response.body()?.message
+                                        val errorObj = com.google.gson.Gson().fromJson(
+                                            errorStr,
+                                            com.example.graduationproject.DataClass.CommonResponse::class.java
+                                        )
+                                        errorObj.message
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                    errorMessage = realErrorMessage ?: "帳號或密碼錯誤"
                                 }
-
-
                             } catch (e: Exception) {
                                 Log.e("LoginError", "連線失敗的真正原因：", e)
                                 errorMessage = "網路連線失敗，請檢查網路"

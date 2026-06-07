@@ -1,4 +1,3 @@
-//TODO: Remove Toast
 package com.example.graduationproject.ui.screens
 
 import android.widget.Toast
@@ -31,20 +30,19 @@ import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.graduationproject.api.ApiClient
 
-// 1. 定義驗證 Helper 函式 (移除手機驗證，保留 Email)
 fun String.isValidEmail(): Boolean =
     android.util.Patterns.EMAIL_ADDRESS.matcher(this).matches()
 
-// 延續 HomeScreen 的色調
+fun String.isValidPhone(): Boolean =
+    this.all { it.isDigit() } && (this.length == 10 || this.length == 9)
+
 private val BeigeBg = Color(0xFFFDFCF9)
 private val PrimaryPeach = Color(0xFFFF8A65)
 private val SecondaryTeal = Color(0xFF4DB6AC)
 private val TextMain = Color(0xFF201A18)
 
-/**
- * 六位數方框驗證碼組件
- */
 @Composable
 fun VerificationCodeInput(
     code: String,
@@ -110,14 +108,14 @@ fun RegisterScreen(
     var name by remember { mutableStateOf("") }
     var account by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    // 新增即時驗證狀態變數
     var isAccountError by remember { mutableStateOf(false) }
     var isEmailError by remember { mutableStateOf(false) }
+    var isPhoneError by remember { mutableStateOf(false) }
 
-    // 一、 狀態管理與倒數邏輯 (State & Timer)
     var verificationCode by remember { mutableStateOf("") }
     var timeLeft by remember { mutableIntStateOf(0) }
     var isCodeSent by remember { mutableStateOf(false) }
@@ -138,11 +136,10 @@ fun RegisterScreen(
 
             coroutineScope.launch {
                 try {
-                    //測試暫時關閉驗證功能
                     if (verificationCode == "000000") {
                         isVerifyingCode = false
                         isCodeVerified = true
-                        android.widget.Toast.makeText(context, "驗證成功", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "驗證成功", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
 
@@ -170,7 +167,6 @@ fun RegisterScreen(
         }
     }
 
-    // 計時器邏輯
     LaunchedEffect(timeLeft) {
         if (timeLeft > 0) {
             delay(1000L)
@@ -190,52 +186,30 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "建立新帳號",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMain
-            )
-
+            Text(text = "建立新帳號", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = TextMain)
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "加入我們，開始智慧健康生活",
-                fontSize = 16.sp,
-                color = TextMain.copy(alpha = 0.6f)
-            )
-
+            Text(text = "加入我們，開始智慧健康生活", fontSize = 16.sp, color = TextMain.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 1. 姓名 (統一高度 min = 64.dp)
+            // 1. 姓名
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("姓名") },
+                value = name, onValueChange = { name = it }, label = { Text("姓名") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true
+                shape = RoundedCornerShape(16.dp), singleLine = true
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 2. 帳號 (純帳號輸入，移除驗證碼按鈕)
+            // 2. 帳號
             OutlinedTextField(
-                value = account,
-                onValueChange = { newValue ->
-                    account = newValue
-                    errorMessage = null
-                },
-                label = { Text("帳號") },
+                value = account, onValueChange = { account = it; errorMessage = null }, label = { Text("帳號") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                isError = isAccountError,
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true
+                isError = isAccountError, shape = RoundedCornerShape(16.dp), singleLine = true
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 3. Email (新增獨立欄位，並加上驗證碼發送按鈕)
+            // 3. Email
             OutlinedTextField(
                 value = email,
                 onValueChange = { newValue ->
@@ -246,11 +220,7 @@ fun RegisterScreen(
                 label = { Text("電子信箱") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                 isError = isEmailError,
-                supportingText = {
-                    if (isEmailError) {
-                        Text(text = "請輸入有效的 Email 格式")
-                    }
-                },
+                supportingText = { if (isEmailError) { Text(text = "請輸入有效的 Email 格式") } },
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
@@ -280,15 +250,9 @@ fun RegisterScreen(
                             }
                         },
                         enabled = timeLeft == 0 && isEmailValid && !isEmailError,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = PrimaryPeach,
-                            disabledContentColor = Color.Gray
-                        )
+                        colors = ButtonDefaults.textButtonColors(contentColor = PrimaryPeach, disabledContentColor = Color.Gray)
                     ) {
-                        Text(
-                            text = if (timeLeft > 0) "${timeLeft}s" else "發送驗證碼",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = if (timeLeft > 0) "${timeLeft}s" else "發送驗證碼", fontWeight = FontWeight.Bold)
                     }
                 }
             )
@@ -296,71 +260,42 @@ fun RegisterScreen(
             // 驗證碼區塊
             AnimatedVisibility(
                 visible = isCodeSent,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(24.dp))
                     VerificationCodeInput(
-                        code = verificationCode,
-                        isError = verificationError != null,
+                        code = verificationCode, isError = verificationError != null,
                         onCodeChange = { newValue ->
                             if (!isCodeVerified) {
-                                if (verificationError != null) {
-                                    verificationError = null
-                                }
+                                if (verificationError != null) { verificationError = null }
                                 verificationCode = newValue
                             }
                         }
                     )
 
-
                     if (verificationCode.isNotEmpty() && !isCodeVerified && !isVerifyingCode) {
-                        TextButton(
-                            onClick = {
-                                verificationCode = ""
-                                verificationError = null
-                            },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
+                        TextButton(onClick = { verificationCode = ""; verificationError = null }, modifier = Modifier.align(Alignment.End)) {
                             Text("清空重填", color = PrimaryPeach, fontSize = 14.sp)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.height(32.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
+                    Row(modifier = Modifier.height(32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         when {
                             isVerifyingCode -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = SecondaryTeal
-                                )
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = SecondaryTeal)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("驗證中...", fontSize = 16.sp, color = Color.Gray)
                             }
                             isCodeVerified -> {
-                                Icon(
-                                    Icons.Rounded.CheckCircle,
-                                    contentDescription = null,
-                                    tint = SecondaryTeal,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Rounded.CheckCircle, null, tint = SecondaryTeal, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("驗證成功", fontSize = 16.sp, color = SecondaryTeal, fontWeight = FontWeight.Bold)
                             }
                             verificationError != null -> {
-                                Icon(
-                                    Icons.Rounded.Error,
-                                    contentDescription = null,
-                                    tint = Color.Red,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Rounded.Error, null, tint = Color.Red, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(verificationError!!, fontSize = 16.sp, color = Color.Red)
                             }
@@ -373,81 +308,79 @@ fun RegisterScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = if (timeLeft > 0) "未收到驗證碼？請於 ${timeLeft}s 後重新發送" else "現在可以重新發送驗證碼",
-                        fontSize = 14.sp,
-                        color = TextMain.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
+                        fontSize = 14.sp, color = TextMain.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // 4. 密碼 (統一高度 min = 64.dp)
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("密碼") },
+                value = phone,
+                onValueChange = { newValue ->
+                    if (newValue.all { it.isDigit() }) {
+                        phone = newValue
+                        errorMessage = null
+                        isPhoneError = newValue.isNotEmpty() && !newValue.isValidPhone()
+                    }
+                },
+                label = { Text("電話號碼") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+                isError = isPhoneError,
+                supportingText = { if (isPhoneError) { Text(text = "請輸入有效的電話號碼格式") } },
                 shape = RoundedCornerShape(16.dp),
-                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 5. 確認密碼 (統一高度 min = 64.dp)
-            val isPasswordMismatch = password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword
+            // 5. 密碼
+            OutlinedTextField(
+                value = password, onValueChange = { password = it }, label = { Text("密碼") },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+                shape = RoundedCornerShape(16.dp), visualTransformation = PasswordVisualTransformation(), singleLine = true
+            )
 
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 6. 確認密碼
+            val isPasswordMismatch = password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = {
                     confirmPassword = it
-                    if (errorMessage == "密碼輸入不一致") {
-                        errorMessage = null
-                    }
+                    if (errorMessage == "密碼輸入不一致") { errorMessage = null }
                 },
                 label = { Text("確認密碼") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                shape = RoundedCornerShape(16.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                isError = isPasswordMismatch,
-                supportingText = {
-                    if (isPasswordMismatch) {
-                        Text(
-                            text = "密碼輸入不一致",
-                            color = Color.Red
-                        )
-                    }
-                }
+                shape = RoundedCornerShape(16.dp), visualTransformation = PasswordVisualTransformation(),
+                singleLine = true, isError = isPasswordMismatch,
+                supportingText = { if (isPasswordMismatch) { Text(text = "密碼輸入不一致", color = Color.Red) } }
             )
 
-            // 錯誤訊息
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = errorMessage!!,
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Text(text = errorMessage!!, color = Color.Red, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 註冊按鈕 (狀態連動)
+            // 註冊按鈕
             ScaleButton(
                 onClick = {
                     val isEmailValid = email.isValidEmail()
+                    val isPhoneValid = phone.isValidPhone()
 
-                    if (name.isEmpty() || account.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                    if (name.isEmpty() || account.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty()) {
                         errorMessage = "請填寫所有基本欄位"
                     } else if (isCodeSent && !isCodeVerified) {
                         errorMessage = "驗證碼尚未確認成功"
                     } else if (!isEmailValid) {
                         errorMessage = "Email 格式錯誤"
+                    } else if (!isPhoneValid) {
+                        errorMessage = "電話號碼格式錯誤"
                     } else if (password != confirmPassword) {
                         errorMessage = "兩次密碼輸入不一致"
                     } else {
@@ -458,15 +391,24 @@ fun RegisterScreen(
                                     name = name,
                                     username = account,
                                     email = email,
+                                    phone = phone,
                                     password = password
                                 )
-                                val response = com.example.graduationproject.api.ApiClient.apiService.registerElder(request)
+                                val response = ApiClient.apiService.registerElder(request)
 
                                 if (response.isSuccessful && response.body()?.success == true) {
                                     Toast.makeText(context, "註冊成功！", Toast.LENGTH_SHORT).show()
                                     onNavigateBackToLogin()
                                 } else {
-                                    errorMessage = response.body()?.message ?: "註冊失敗"
+                                    val realErrorMessage = try {
+                                        val errorBodyString = response.errorBody()?.string()
+                                        val gson = com.google.gson.Gson()
+                                        val errorObj = gson.fromJson(errorBodyString, com.example.graduationproject.DataClass.CommonResponse::class.java)
+                                        errorObj.message
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                    errorMessage = realErrorMessage ?: "註冊失敗 (狀態碼: ${response.code()})"
                                 }
                             } catch (e: Exception) {
                                 errorMessage = "網路異常：${e.message}"
@@ -481,27 +423,20 @@ fun RegisterScreen(
                         name.isNotEmpty() &&
                         account.isNotEmpty() &&
                         email.isNotEmpty() &&
+                        phone.isNotEmpty() &&
                         password.isNotEmpty() &&
                         password == confirmPassword &&
                         !isAccountError &&
                         !isEmailError &&
+                        !isPhoneError &&
                         (!isCodeSent || isCodeVerified),
                 contentDescription = "註冊帳號按鈕"
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 返回登入
-            TextButton(
-                onClick = onNavigateBackToLogin,
-                modifier = Modifier.heightIn(min = 48.dp)
-            ) {
-                Text(
-                    text = "已有帳號？ 返回登入",
-                    color = SecondaryTeal,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+            TextButton(onClick = onNavigateBackToLogin, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(text = "已有帳號？ 返回登入", color = SecondaryTeal, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         }
     }

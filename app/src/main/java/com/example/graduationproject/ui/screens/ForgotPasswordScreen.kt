@@ -15,8 +15,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,13 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.graduationproject.DataClass.SendOtpRequest
 import com.example.graduationproject.DataClass.VerifyOtpRequest
+import com.example.graduationproject.DataClass.ResetPasswordRequest
 import com.example.graduationproject.api.ApiClient
 import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 延續色調
+
 private val BeigeBg = Color(0xFFFDFCF9)
 private val PrimaryPeach = Color(0xFFFF8A65)
 private val SecondaryTeal = Color(0xFF4DB6AC)
@@ -66,11 +65,6 @@ fun ForgotPasswordScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Email 格式驗證
-    fun String.isValidEmail(): Boolean =
-        Patterns.EMAIL_ADDRESS.matcher(this).matches()
-
-    // 驗證碼邏輯
     LaunchedEffect(verificationCode) {
         if (verificationCode.length == 6 && !isCodeVerified && !isVerifyingCode) {
             isVerifyingCode = true
@@ -78,7 +72,6 @@ fun ForgotPasswordScreen(
 
             coroutineScope.launch {
                 try {
-                    // 測試暫時保留 000000 為成功碼
                     if (verificationCode == "000000") {
                         isVerifyingCode = false
                         isCodeVerified = true
@@ -147,7 +140,6 @@ fun ForgotPasswordScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // 1. 電子信箱 + 發送驗證碼
             OutlinedTextField(
                 value = email,
                 onValueChange = { newValue ->
@@ -178,15 +170,21 @@ fun ForgotPasswordScreen(
                                 coroutineScope.launch {
                                     try {
                                         val request = SendOtpRequest(email = email)
-                                        val response = ApiClient.apiService.sendEmailOtp(request)
+                                        val response = ApiClient.apiService.sendForgotOtp(request)
 
                                         if (response.isSuccessful && response.body()?.success == true) {
                                             Toast.makeText(context, "驗證碼已發送", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            Toast.makeText(context, response.body()?.message ?: "發送失敗", Toast.LENGTH_LONG).show()
+                                            val realMsg = try {
+                                                val errorStr = response.errorBody()?.string()
+                                                val errorObj = com.google.gson.Gson().fromJson(errorStr, com.example.graduationproject.DataClass.CommonResponse::class.java)
+                                                errorObj.message
+                                            } catch (e: Exception) { null }
+
+                                            Toast.makeText(context, realMsg ?: "發送失敗", Toast.LENGTH_LONG).show()
                                         }
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "網路異常", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "網路異常，發送失敗", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -214,7 +212,6 @@ fun ForgotPasswordScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 標記這是一個驗證碼欄位
                     Text(
                         text = "驗證碼",
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -286,7 +283,6 @@ fun ForgotPasswordScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 3. 新密碼
             OutlinedTextField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
@@ -299,7 +295,6 @@ fun ForgotPasswordScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 4. 確認新密碼
             val isPasswordMismatch = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword
             OutlinedTextField(
                 value = confirmPassword,
@@ -337,10 +332,24 @@ fun ForgotPasswordScreen(
                         isLoading = true
                         coroutineScope.launch {
                             try {
-                                // TODO: 串接實際的重設密碼 API
-                                delay(1500)
-                                Toast.makeText(context, "密碼重設成功！", Toast.LENGTH_SHORT).show()
-                                onResetSuccess()
+                                val request = ResetPasswordRequest(
+                                    email = email,
+                                    newPassword = newPassword
+                                )
+                                val response = ApiClient.apiService.resetPassword(request)
+
+                                if (response.isSuccessful && response.body()?.success == true) {
+                                    Toast.makeText(context, "密碼重設成功！", Toast.LENGTH_SHORT).show()
+                                    onResetSuccess()
+                                } else {
+                                    val realErrorMessage = try {
+                                        val errorStr = response.errorBody()?.string()
+                                        val errorObj = com.google.gson.Gson().fromJson(errorStr, com.example.graduationproject.DataClass.CommonResponse::class.java)
+                                        errorObj.message
+                                    } catch (e: Exception) { null }
+
+                                    errorMessage = realErrorMessage ?: "重設失敗 (狀態碼: ${response.code()})"
+                                }
                             } catch (e: Exception) {
                                 errorMessage = "網路異常，請稍後再試"
                             } finally {
@@ -356,7 +365,6 @@ fun ForgotPasswordScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 6. 想起密碼了？返回登入
             TextButton(
                 onClick = onNavigateBackToLogin,
                 modifier = Modifier.heightIn(min = 48.dp)
