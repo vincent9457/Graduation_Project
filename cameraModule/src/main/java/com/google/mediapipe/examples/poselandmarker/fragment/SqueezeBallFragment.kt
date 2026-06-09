@@ -45,9 +45,9 @@ class SqueezeBallFragment : Fragment() {
         private const val REPS_PER_SET = 12
         private const val SETS_PER_HAND = 3
         private const val SET_REST_TIME_MS = 60000L
-        private const val SQUEEZE_THRESHOLD = 0.55f // 比例低於此值視為握緊
+        private const val SQUEEZE_THRESHOLD = 0.60f // 比例低於此值視為握緊
         private const val RELEASE_THRESHOLD = 0.70f // 比例高於此值視為鬆開
-        private const val PERFECT_SQUEEZE_RATIO = 0.05f // 完美握緊的比例 (指尖幾乎貼到大拇指)
+        private const val PERFECT_SQUEEZE_RATIO = 0.50f // 完美握緊的比例 (指尖幾乎貼到大拇指)
         private const val TARGET_HOLD_MS = 2000L // 目標停留時間 (2秒)
     }
     private var minSqueezeRatioDuringHold = 1.0f
@@ -116,7 +116,7 @@ class SqueezeBallFragment : Fragment() {
         }
 
         binding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         binding.fabSwitchCamera.setOnClickListener {
@@ -291,7 +291,7 @@ class SqueezeBallFragment : Fragment() {
                 val holdScore = (squeezeDuration.toFloat() / TARGET_HOLD_MS).coerceIn(0f, 1f)
 
                 // 計算單次總分 (滿分 100)
-                val currentAccuracy = (depthScore * 0.6f + holdScore * 0.4f) * 100f
+                val currentAccuracy = (depthScore * 0.9f + holdScore * 0.1f) * 100f
 
                 totalAccuracyAccumulated += currentAccuracy
                 accuracyTicks++

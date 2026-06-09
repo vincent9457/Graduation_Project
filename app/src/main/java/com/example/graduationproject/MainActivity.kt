@@ -152,7 +152,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
         }
     }
 }
-
+private const val CAMERA_FRAGMENT_CAMERA = "camera_fragment"
 private const val CAMERA_FRAGMENT_HOME = "home_fragment"
 private const val CAMERA_FRAGMENT_STRETCH = "stretch_fragment"
 private const val CAMERA_FRAGMENT_CHAIR_STAND = "chair_stand_fragment"
@@ -172,11 +172,12 @@ private const val CAMERA_FRAGMENT_STAIR_CLIMBING = "stair_climbing_fragment"
 
 private fun resolveCameraFragment(exerciseId: String): String? {
     return when (exerciseId) {
-        "A1", "A6", "B7", "C8", "D9" -> CAMERA_FRAGMENT_WALKING
+        "A1", "B7", "C8", "D9" -> CAMERA_FRAGMENT_WALKING
         "A2", "B2" -> CAMERA_FRAGMENT_SQUEEZE_BALL
         "A3", "B1", "C2", "D2" -> CAMERA_FRAGMENT_BOTTLE_LIFT
         "A4" -> CAMERA_FRAGMENT_WEIGHTED_LEG_STRETCH
         "A5", "C3", "D3" -> CAMERA_FRAGMENT_CHAIR_STAND
+        "A6" -> CAMERA_FRAGMENT_CAMERA
         "A7", "B6", "C7", "D7" -> CAMERA_FRAGMENT_STRETCH
         "B3" -> CAMERA_FRAGMENT_SIMULATED_SITTING
         "B4" -> CAMERA_FRAGMENT_TOE_HEEL_WALKING

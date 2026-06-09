@@ -128,7 +128,7 @@ class Figure8WalkingFragment : Fragment() {
         binding.overlay.userHeightCm = 165f
 
         binding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         binding.fabSwitchCamera.setOnClickListener {

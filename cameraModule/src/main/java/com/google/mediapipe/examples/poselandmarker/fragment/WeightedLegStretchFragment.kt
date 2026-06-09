@@ -101,7 +101,7 @@ class WeightedLegStretchFragment : Fragment(), PoseLandmarkerHelper.LandmarkerLi
         }
 
         binding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         binding.fabSwitchCamera.setOnClickListener {

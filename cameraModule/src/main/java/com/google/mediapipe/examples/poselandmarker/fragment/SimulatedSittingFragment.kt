@@ -112,7 +112,7 @@ class SimulatedSittingFragment : Fragment(), PoseLandmarkerHelper.LandmarkerList
         }
 
         binding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         binding.fabSwitchCamera.setOnClickListener {

@@ -135,6 +135,9 @@ class CameraFragment : Fragment() {
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (viewModel.currentExerciseMode == ExerciseMode.IDLE) {
+            viewModel.setExerciseMode(ExerciseMode.LEG_LIFT)
+        }
         backgroundExecutor = Executors.newSingleThreadExecutor()
         fragmentCameraBinding.viewFinder.post { setUpCamera() }
 
@@ -164,7 +167,7 @@ class CameraFragment : Fragment() {
         }
 
         fragmentCameraBinding.btnFinish.setOnClickListener {
-            findNavController().navigate(R.id.home_fragment)
+            requireActivity().finish()
         }
 
         fragmentCameraBinding.fabSwitchCamera.setOnClickListener {
