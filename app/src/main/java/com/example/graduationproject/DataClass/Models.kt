@@ -42,6 +42,7 @@ data class RegisterElderRequest(
     val name: String,
     val username: String,
     val email: String,
+    val phone: String,
     val password: String
 )
 
@@ -64,6 +65,17 @@ data class GetPointsResponse(
     val success: Boolean,
     val message: String?,
     val points: Int
+)
+
+data class ElderDashboardResponse(
+    val success: Boolean,
+    val message: String?,
+    val name: String,
+    val level: Int,
+    val grade: String,
+    val points: Int,
+    @SerializedName("streak_days") val streakDays: Int,
+    @SerializedName("current_week") val currentWeek: Int
 )
 
 data class GetPointHistoryRequest(val account_id: Int)
@@ -138,4 +150,24 @@ data class DailyPlan(
     val dayNumber: Int,
     val level: String, // A/B/C/D
     val exercises: List<Exercise>
+)
+
+data class CommunityDataResponse(
+    val success: Boolean,
+    val message: String?,
+    val leaderboard: List<CommunityUser>,
+    val friends: List<CommunityUser>,
+    @SerializedName("pendingRequests") val pendingRequests: List<FriendRequest>
+)
+
+data class FriendActionRequest(
+    @SerializedName("account_id") val accountId: Int,
+    val action: String,
+    @SerializedName("target_id") val targetId: Int? = null,
+    val phone: String? = null
+)
+
+data class ResetPasswordRequest(
+    val email: String,
+    @SerializedName("new_password") val newPassword: String
 )

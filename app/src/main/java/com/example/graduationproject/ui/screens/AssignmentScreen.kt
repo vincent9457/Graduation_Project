@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +33,6 @@ import com.example.graduationproject.ui.components.ScaleButton
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import com.example.graduationproject.ui.theme.scaledSp
 
-// 顏色定義保持一致
 private val BeigeBg = Color(0xFFFDFCF9)
 private val PrimaryPeach = Color(0xFFFF8A65)
 private val SecondaryTeal = Color(0xFF4DB6AC)
@@ -53,17 +51,15 @@ fun AssignmentScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 修正：使用 LaunchedEffect 確保測驗完成時橫幅自動彈出
     var isBannerVisible by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(isSurveyComplete) {
-        if (isSurveyComplete) {
+    LaunchedEffect(isSurveyComplete, userLevel) {
+        if (isSurveyComplete && userLevel.isNotEmpty()) {
             isBannerVisible = true
         }
     }
 
-    // 修正：確保在測驗完成、等級變化或天數變化時，立即加載數據
     LaunchedEffect(userLevel, currentDay, isSurveyComplete) {
-        if (isSurveyComplete) {
+        if (isSurveyComplete && userLevel.isNotEmpty()) {
             viewModel.updateParams(userLevel, currentDay)
         }
     }
@@ -87,10 +83,9 @@ fun AssignmentScreen(
         containerColor = BeigeBg
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            
-            // 提示橫幅
+
             AnimatedVisibility(
-                visible = isBannerVisible && isSurveyComplete,
+                visible = isBannerVisible && isSurveyComplete && userLevel.isNotEmpty(),
                 enter = expandVertically(),
                 exit = shrinkVertically() + fadeOut()
             ) {
@@ -122,10 +117,9 @@ fun AssignmentScreen(
                 }
             }
 
-            if (!isSurveyComplete) {
+            if (!isSurveyComplete || userLevel.isEmpty()) {
                 EmptyStateView(onNavigateToSurvey)
             } else {
-                // 動態渲染任務列表
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -136,8 +130,7 @@ fun AssignmentScreen(
                     items(uiState.exercises, key = { it.id }) { exercise ->
                         ExerciseCard(
                             exercise = exercise,
-                            onStartClick = { 
-                                // 模擬訓練開始，實際上這裡會導向 AI 偵測頁面，目前先直接標記完成
+                            onStartClick = {
                                 onStartTraining(exercise.id)
                                 viewModel.completeExercise(exercise.id)
                             }
@@ -252,10 +245,9 @@ fun ExerciseCard(
                             )
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 顯示組數與休息時間
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -380,10 +372,11 @@ fun EmptyStateView(onNavigateToSurvey: () -> Unit) {
         )
     }
 }
+
 @Preview(showBackground = true, widthDp = 412, heightDp = 892)
 @Composable
 fun AssignmentScreenPreview() {
     GraduationProjectTheme {
-        AssignmentScreen()
+        AssignmentScreen(userLevel = "", isSurveyComplete = false)
     }
 }

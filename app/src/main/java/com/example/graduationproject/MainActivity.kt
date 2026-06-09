@@ -1,28 +1,29 @@
-//TODO: Remove Toast
 package com.example.graduationproject
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.graduationproject.DataClass.SaveAssessmentRequest
+import com.example.graduationproject.api.ApiClient
 import com.example.graduationproject.ui.screens.ElderlyDashboard
+import com.example.graduationproject.ui.screens.ForgotPasswordScreen
 import com.example.graduationproject.ui.screens.LoginScreen
 import com.example.graduationproject.ui.screens.RegisterScreen
 import com.example.graduationproject.ui.screens.SettingsScreen
 import com.example.graduationproject.ui.screens.SurveyScreen
-import com.example.graduationproject.ui.screens.ForgotPasswordScreen
 import com.example.graduationproject.ui.theme.GraduationProjectTheme
 import com.example.graduationproject.ui.theme.LocalFontScale
 import kotlinx.coroutines.launch
-import android.content.Context
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 import com.google.mediapipe.examples.poselandmarker.MainActivity as CameraActivity
 
 class MainActivity : ComponentActivity() {
@@ -51,10 +52,10 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
     }
 
     val savedAccountId = sharedPreferences.getInt("ACCOUNT_ID", -1)
-
     var globalAccountId by remember { mutableIntStateOf(savedAccountId) }
 
     val initialRoute = if (savedAccountId != -1) "home" else "login"
+
     NavHost(
         navController = navController,
         startDestination = initialRoute
@@ -65,9 +66,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
                 onNavigateToForgotPassword = { navController.navigate("forgot_password") },
                 onLoginSuccess = { role, accountId ->
                     globalAccountId = accountId
-
                     sharedPreferences.edit().putInt("ACCOUNT_ID", accountId).apply()
-
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -91,12 +90,8 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
                 accountId = globalAccountId,
                 isSurveyComplete = userViewModel.isSurveyComplete,
                 userLevel = userViewModel.userLevel,
-                onNavigateToSettings = {
-                    navController.navigate("settings")
-                },
-                onNavigateToSurvey = {
-                    navController.navigate("survey")
-                },
+                onNavigateToSettings = { navController.navigate("settings") },
+                onNavigateToSurvey = { navController.navigate("survey") },
                 onStartTraining = { exerciseId ->
                     val intent = Intent(context, CameraActivity::class.java)
                     val targetFragment = exerciseId?.let(::resolveCameraFragment)
@@ -108,17 +103,13 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
             )
         }
 
-
         composable("survey") {
             val coroutineScope = rememberCoroutineScope()
-            val context = androidx.compose.ui.platform.LocalContext.current
+            val localContext = LocalContext.current
 
             SurveyScreen(
                 onComplete = { grade, score, hasFallRisk ->
-
-                    userViewModel.completeSurvey(grade)
-                    navController.popBackStack()
-                    /*coroutineScope.launch {
+                    coroutineScope.launch {
                         try {
                             val request = com.example.graduationproject.DataClass.SaveAssessmentRequest(
                                 account_id = globalAccountId,
@@ -127,21 +118,19 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
                                 has_fall_risk = hasFallRisk
                             )
 
-                            val response = com.example.graduationproject.api.ApiClient.apiService.saveAssessment(request)
+                            val response = ApiClient.apiService.saveAssessment(request)
 
                             if (response.isSuccessful && response.body()?.success == true) {
-                                android.widget.Toast.makeText(context, "評估結果已成功紀錄", android.widget.Toast.LENGTH_SHORT).show()
+                                Toast.makeText(localContext, "評估結果已成功紀錄", Toast.LENGTH_SHORT).show()
                                 userViewModel.completeSurvey(grade)
                                 navController.popBackStack()
+                            } else {
+                                Toast.makeText(localContext, "儲存失敗：${response.body()?.message}", Toast.LENGTH_LONG).show()
                             }
-                            else {
-                                android.widget.Toast.makeText(context, "儲存失敗：${response.body()?.message}", android.widget.Toast.LENGTH_LONG).show()
-                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(localContext, "網路連線異常：${e.message}", Toast.LENGTH_SHORT).show()
                         }
-                        catch (e: Exception) {
-                            android.widget.Toast.makeText(context, "網路連線異常：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }*/
+                    }
                 },
                 onNavigateBack = {
                     navController.popBackStack()
@@ -151,9 +140,7 @@ fun AppNavigation(userViewModel: UserViewModel = viewModel()) {
 
         composable("settings") {
             SettingsScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
+                onNavigateBack = { navController.popBackStack() },
                 onLogout = {
                     sharedPreferences.edit().remove("ACCOUNT_ID").apply()
                     globalAccountId = -1
